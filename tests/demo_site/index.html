@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Project A Demo</title>
+  <style>
+    body { font-family: Segoe UI, sans-serif; margin: 40px; max-width: 640px; }
+    button, a { margin-right: 8px; }
+    section { margin-top: 20px; padding: 16px; border: 1px solid #ccc; }
+    .hidden { display: none; }
+    #challenge { background: #fff6d8; }
+  </style>
+</head>
+<body>
+  <h1>Project A Daily Task</h1>
+  <p>Local page for Learn Mode and replay. No account is created.</p>
+  <button id="connect" type="button">Connect</button>
+  <section id="tasks" class="hidden">
+    <h2>Tasks</h2>
+    <button id="checkin" type="button">Daily Check-in</button>
+    <p>
+      <label for="note">Required value</label><br>
+      <input id="note" name="note" placeholder="Required value">
+    </p>
+    <p>
+      <label for="password">Password</label><br>
+      <input id="password" name="password" type="password" autocomplete="current-password">
+    </p>
+    <button id="submit" type="button">Submit</button>
+    <p id="completed" class="hidden">Completed</p>
+  </section>
+  <p><a id="next" href="page2.html">Next page</a></p>
+  <p><button id="show-challenge" type="button">Show verification panel</button></p>
+  <section id="challenge" class="hidden">
+    <p>Human verification</p>
+    <p>This panel is only a test. The app must pause and wait. It must not solve this.</p>
+  </section>
+  <script>
+    document.getElementById("connect").addEventListener("click", () => {
+      document.getElementById("tasks").classList.remove("hidden");
+    });
+    document.getElementById("submit").addEventListener("click", () => {
+      document.getElementById("completed").classList.remove("hidden");
+    });
+    document.getElementById("show-challenge").addEventListener("click", () => {
+      document.getElementById("challenge").classList.remove("hidden");
+    });
+  </script>
+</body>
+</html>
