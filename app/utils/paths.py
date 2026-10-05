@@ -3,15 +3,20 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+def get_project_root() -> Path:
+    """Folder that contains the source tree, or the folder that contains the packaged exe."""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parents[2]
 
 
 def get_data_dir() -> Path:
     override = os.environ.get("BTA_DATA_DIR")
-    path = Path(override) if override else PROJECT_ROOT / "data"
+    path = Path(override) if override else get_project_root() / "data"
     path.mkdir(parents=True, exist_ok=True)
     return path
 

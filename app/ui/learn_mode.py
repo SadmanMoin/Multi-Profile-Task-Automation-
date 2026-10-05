@@ -26,14 +26,17 @@ from app.ui.widgets import page_title, show_error
 
 
 class LearnPage(QWidget):
-    def __init__(self) -> None:
+    def __init__(self, open_workflows=None) -> None:
         super().__init__()
+        self._open_workflows = open_workflows
         self.session = LearnSession()
         self.workflow_id: int | None = None
         self.name = QLineEdit()
         self.name.setPlaceholderText("Project A Daily Task")
         self.description = QLineEdit()
         self.description.setPlaceholderText("Optional description")
+        self.start_url = QLineEdit()
+        self.start_url.setPlaceholderText("optional — leave empty for your Chrome New Tab page")
         self.profile = QComboBox()
         self.start_button = QPushButton("Enter Learn Mode")
         self.start_button.setObjectName("primary")
@@ -56,13 +59,16 @@ class LearnPage(QWidget):
         layout.addWidget(
             page_title(
                 "Learn Mode",
-                "Perform the task once in Chrome. Clicks, typing, and navigation are recorded. "
-                "Passwords and other secrets are stored as {{PLACEHOLDERS}}, never as real values. "
+                "Learn Mode opens a private copy of the selected Chrome profile. "
+                "Your daily Chrome logins and history are left alone. "
+                "Put a start URL below, or type the site in the address bar. "
+                "Clicks, typing, and navigation are recorded. Passwords become {{PLACEHOLDERS}}. "
                 "Human verification is not solved.",
             )
         )
         layout.addWidget(self.name)
         layout.addWidget(self.description)
+        layout.addWidget(self.start_url)
         layout.addLayout(row)
         layout.addWidget(self.placeholders)
         layout.addWidget(self.editor, 1)
@@ -76,6 +82,7 @@ class LearnPage(QWidget):
         self.workflow_id = None
         self.name.clear()
         self.description.clear()
+        self.start_url.clear()
         self.editor.set_steps([])
         self.name.setFocus()
 
@@ -111,7 +118,7 @@ class LearnPage(QWidget):
         if self.editor.steps and not self._confirm_discard():
             return
         try:
-            self.session.start(profile)
+            self.session.start(profile, self.start_url.text())
         except (ProfileInUse, AutomationError) as exc:
             show_error(self, exc)
             return
@@ -133,7 +140,7 @@ class LearnPage(QWidget):
             self.stop_button.setEnabled(False)
             self.editor.set_locked(False)
             if self.session.error:
-                QMessageBox.critical(self, "Learn Mode", self.session.error)
+                QMessageBox.critical(self, "Learn Mode", self.session.error.split("Call log:")[0].strip())
                 self.session.error = None
             return
         steps = self.session.snapshot()
@@ -142,29 +149,38 @@ class LearnPage(QWidget):
             self._show_placeholders()
 
     def _stop(self) -> None:
+        failed = False
         try:
             steps = self.session.stop()
         except AutomationError as exc:
             steps = self.session.snapshot()
             show_error(self, exc)
+            failed = True
         self.timer.stop()
         self.editor.set_steps(steps)
         self.editor.set_locked(False)
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
         self._show_placeholders()
+        if not failed:
+            self._save(from_end=True)
 
     def _show_placeholders(self) -> None:
         names = find_variables(*(step.value for step in self.editor.get_steps()))
         self.placeholders.setText("Placeholders: " + (", ".join(names) if names else "none"))
 
-    def _save(self) -> None:
+    def _save(self, from_end: bool = False) -> None:
         if self.session.running:
             QMessageBox.warning(self, "Learn Mode", "End Learn Mode before saving.")
             return
         steps = self.editor.get_steps()
         if not steps:
-            QMessageBox.warning(self, "Learn Mode", "Record or add at least one step.")
+            QMessageBox.warning(
+                self,
+                "Learn Mode",
+                "No steps were recorded. In the Chrome window open your website, click and type, "
+                "then press End Learn Mode again.",
+            )
             return
         try:
             saved = save_workflow(
@@ -179,5 +195,8 @@ class LearnPage(QWidget):
         QMessageBox.information(
             self,
             "Workflow saved",
-            f"Saved {saved.name} v{saved.version}. Assign it to profiles, then press Run. It was not started.",
+            f"Saved {saved.name} v{saved.version} with {len(saved.steps)} step(s). "
+            "It is on the Workflows page. Assign profiles, then press Run.",
         )
+        if from_end and self._open_workflows:
+            self._open_workflows()

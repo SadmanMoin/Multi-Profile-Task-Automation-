@@ -29,6 +29,13 @@ python run.py
 
 Run that command from this folder (`browser_task_automation`). The window title is **Browser Task Automation**.
 
+A Windows app is also built at `dist\BrowserTaskAutomation.exe`. Double-click that file. It creates a `data` folder next to the exe for the database and logs. Google Chrome still has to be installed on the PC. Rebuild the exe with:
+
+```powershell
+python -m pip install pyinstaller
+python -m PyInstaller --noconfirm --clean BrowserTaskAutomation.spec
+```
+
 ## Add a Chrome profile
 
 1. Open **Profiles** and choose **Add**.

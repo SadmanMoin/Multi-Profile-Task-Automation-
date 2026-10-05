@@ -24,6 +24,48 @@ from app.utils.redact import redact_text
 
 logger = get_logger("recorder")
 
+DEFAULT_NEW_TAB_URLS = (
+    "chrome://new-tab-page/",
+    "chrome://newtab/",
+    "https://www.google.com/",
+)
+
+
+def normalize_start_url(start_url: str) -> str:
+    text = (start_url or "").strip()
+    if not text:
+        return ""
+    if "://" not in text:
+        return "https://" + text
+    return text
+
+
+def open_learn_start_page(page, start_url: str = "") -> None:
+    """Open the user's New Tab page, or a URL they typed in Learn Mode."""
+    targets = []
+    normalized = normalize_start_url(start_url)
+    if normalized:
+        targets.append(normalized)
+    else:
+        targets.extend(DEFAULT_NEW_TAB_URLS)
+    for url in targets:
+        try:
+            page.goto(url, wait_until="domcontentloaded")
+            body = ""
+            try:
+                body = page.inner_text("body")
+            except Exception:
+                body = page.url or ""
+            if "incorrect profile type" in body.lower():
+                continue
+            return
+        except Exception:
+            logger.debug("Could not open Learn Mode start page %s", url, exc_info=True)
+    try:
+        page.bring_to_front()
+    except Exception:
+        logger.exception("Could not focus the Learn Mode window")
+
 # Playwright evaluates an init script as a program. A bare arrow function would
 # be created and discarded, so this source calls itself.
 RECORDER_SCRIPT = r"""
@@ -268,6 +310,7 @@ class Recorder:
 
         verification = VerificationType.PAGE_LOADED if action == ActionType.OPEN_URL else VerificationType.NONE
         with self._lock:
+            logger.info("Recorded %s %s", action, redact_text(value)[:120])
             self._steps.append(
                 WorkflowStep(
                     step_number=len(self._steps) + 1,
@@ -407,7 +450,7 @@ class LearnSession:
     def snapshot(self) -> list[WorkflowStep]:
         return self.recorder.steps()
 
-    def start(self, profile: Profile) -> None:
+    def start(self, profile: Profile, start_url: str = "") -> None:
         if self.running:
             raise AutomationError("Learn Mode is already running")
         if profile.id is None:
@@ -425,13 +468,13 @@ class LearnSession:
         self.profile_id = profile.id
         self._thread = threading.Thread(
             target=self._run,
-            args=(profile,),
+            args=(profile, start_url.strip()),
             name="bta-learn",
             daemon=True,
         )
         self._thread.start()
 
-    def _run(self, profile: Profile) -> None:
+    def _run(self, profile: Profile, start_url: str = "") -> None:
         browser = BrowserManager()
         self._browser = browser
         try:
@@ -440,8 +483,8 @@ class LearnSession:
             pid = browser.find_pid(profile)
             if profile.id is not None and pid:
                 repositories.set_lock_browser_pid(profile.id, pid)
-            if not context.pages:
-                context.new_page()
+            page = context.pages[-1] if context.pages else context.new_page()
+            open_learn_start_page(page, start_url)
             self._stop.wait()
         except Exception as exc:
             self.error = redact_text(str(exc))

@@ -9,10 +9,12 @@ from PySide6.QtWidgets import QApplication
 from app.database.database import init_db
 from app.ui.main_window import MainWindow
 from app.ui.theme import STYLESHEET
+from app.utils.frozen import prepare_packaged_runtime
 from app.utils.logger import get_logger, setup_logging
 
 
 def main() -> int:
+    prepare_packaged_runtime()
     setup_logging()
     logger = get_logger("main")
     init_db()

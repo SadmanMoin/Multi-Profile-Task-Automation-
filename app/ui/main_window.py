@@ -44,7 +44,7 @@ class MainWindow(QMainWindow):
         self.bridge.notify.connect(self._on_notify)
         self.execution.add_listener(self._listener)
 
-        self.learn_page = LearnPage()
+        self.learn_page = LearnPage(open_workflows=self._open_workflows)
         self.run_page = RunPage(self.execution)
         self.pages = [
             DashboardPage(),
@@ -103,6 +103,9 @@ class MainWindow(QMainWindow):
         index = list(NAV_ITEMS).index("Learn Mode")
         self.nav.setCurrentRow(index)
         self.learn_page.begin_new()
+
+    def _open_workflows(self) -> None:
+        self.nav.setCurrentRow(list(NAV_ITEMS).index("Workflows"))
 
     def _switch(self, index: int) -> None:
         if index < 0:

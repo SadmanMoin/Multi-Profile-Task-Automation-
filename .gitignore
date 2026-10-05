@@ -12,4 +12,7 @@ data/screenshots/*
 data/workflows/*
 !data/workflows/.gitkeep
 data/.secret_key
+data/chrome-profiles/
 *.egg-info/
+build/
+dist/
